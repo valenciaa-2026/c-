@@ -1,0 +1,47 @@
+name: Build C++ EXE
+
+on:
+  push:
+    branches:
+      - main
+  workflow_dispatch:
+
+jobs:
+  build:
+    runs-on: windows-latest
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Check C++ compiler
+        run: g++ --version
+
+      - name: Find and build C++ file
+        shell: pwsh
+        run: |
+          $cpp = Get-ChildItem -Path . -Filter *.cpp -Recurse | Select-Object -First 1
+
+          if (-not $cpp) {
+            Write-Error "File .cpp tidak ditemukan!"
+            exit 1
+          }
+
+          Write-Host "Compiling: $($cpp.FullName)"
+
+          $output = Join-Path $cpp.DirectoryName ($cpp.BaseName + ".exe")
+
+          g++ $cpp.FullName -o $output -O2 -static
+
+          if ($LASTEXITCODE -ne 0) {
+            Write-Error "Compilation gagal!"
+            exit 1
+          }
+
+          Write-Host "Berhasil membuat: $output"
+
+      - name: Upload EXE
+        uses: actions/upload-artifact@v4
+        with:
+          name: cpp-exe
+          path: "**/*.exe"
